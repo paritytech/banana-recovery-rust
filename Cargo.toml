@@ -1,0 +1,24 @@
+[package]
+description = "Banana split decoding implementation in Rust"
+license = "Apache-2.0"
+name = "banana_recovery"
+version = "0.1.0"
+authors = ["Alexander Slesarev <slesarew@gmail.com>", "Vera Abramova <abramova.vera@gmail.com>"]
+edition = "2021"
+repository = "https://github.com/paritytech/banana-recovery-rust"
+homepage = "https://github.com/paritytech/banana-recovery-rust"
+keywords = ["shamir", "banana_split", "signer", "parity"]
+
+[dependencies]
+base64 = "0.13.0"
+bitvec = "1.0.0"
+hex = "0.4.3"
+json = "0.12.4"
+scrypt = "0.8.1"
+sha2 = "0.10.1"
+xsalsa20poly1305 = {git = "https://github.com/Slesarew/AEADs"} # temporary fork with upped zeroize version
+zeroize = {version = "1.5.2", features = ["alloc", "derive"]}
+
+[lib]
+name = "banana_recovery"
+crate-type = ["lib"]
