@@ -44,7 +44,7 @@ mod tests {
         let share2 = Share::new(hex::decode(SCAN_A2).unwrap()).unwrap();
         share_set.try_add_share(share2).unwrap();
         assert!(
-            share_set.next_action() == NextAction::AskPwd,
+            share_set.next_action() == NextAction::AskUserForPassword,
             "Two different shares are sufficient."
         );
 

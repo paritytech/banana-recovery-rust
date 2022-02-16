@@ -185,7 +185,7 @@ pub struct SetCombined(Vec<u8>);
 #[derive(Debug, PartialEq)]
 pub enum NextAction {
     MoreShares { have: usize, need: usize },
-    AskPwd,
+    AskUserForPassword,
 }
 
 impl SetInProgress {
@@ -296,7 +296,7 @@ impl ShareSet {
                 have: set_in_progress.id_set.len(),
                 need: self.required_shards,
             },
-            ShareSetState::SetCombined(_) => NextAction::AskPwd,
+            ShareSetState::SetCombined(_) => NextAction::AskUserForPassword,
         }
     }
     /// Function to print set title into user interface
