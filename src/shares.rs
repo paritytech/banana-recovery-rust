@@ -12,7 +12,7 @@ pub(crate) const MIN_BITS: u32 = 3;
 pub(crate) const MAX_BITS: u32 = 20;
 
 /// Struct to store information about individual share.
-/// Share information is decoded from the incoming share only.
+/// `Share` information is decoded from the incoming share only.
 /// In valid share the bits are within allowed limits,
 /// this is always checked during share generation.
 /// Share contains certain things that should better remain secret,
