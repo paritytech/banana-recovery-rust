@@ -366,22 +366,22 @@ impl ShareSet {
 #[rustfmt::skip]
 const PRIMITIVE_POLYNOMIALS: [u32; 18] = [
     3, // n = 3, or MIN_BITS
-    3, 
-    5, 
-    3, 
-    3, 
-    29, 
-    17, 
-    9, 
-    5, 
-    83, 
-    27, 
-    43, 
-    3, 
-    45, 
-    9, 
-    39, 
-    39, 
+    3,
+    5,
+    3,
+    3,
+    29,
+    17,
+    9,
+    5,
+    83,
+    27,
+    43,
+    3,
+    45,
+    9,
+    39,
+    39,
     9, // n = 20, or MAX_BITS
 ];
 
@@ -447,7 +447,9 @@ pub(crate) fn lagrange(
                 for j in 0..len {
                     if i != j {
                         let p1 = match logs.get(x[j] as usize) {
-                            Some(a) => a.expect("x[j] is never zero, it is share number, numbering starts from 1"),
+                            Some(a) => a.expect(
+                                "x[j] is never zero, it is share number, numbering starts from 1",
+                            ),
                             None => return Err(Error::LogOutOfRange(x[j])),
                         };
                         let p2 = match logs.get((x[i]^x[j]) as usize) {
