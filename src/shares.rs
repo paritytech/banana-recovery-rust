@@ -33,6 +33,7 @@ pub struct Share {
 /// currently only V1 exists, no version in json results in Undefined variant;
 /// other versions are not supported and rejected;
 #[derive(Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Version {
     Undefined,
     V1,
