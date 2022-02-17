@@ -12,7 +12,7 @@ pub(crate) const MIN_BITS: u32 = 3;
 pub(crate) const MAX_BITS: u32 = 20;
 
 /// Struct to store information about individual share.
-/// Share information is decoded from the incoming share only.
+/// `Share` information is decoded from the incoming share only.
 /// In valid share the bits are within allowed limits,
 /// this is always checked during share generation.
 /// Share contains certain things that should better remain secret,
@@ -33,6 +33,7 @@ pub struct Share {
 /// currently only V1 exists, no version in json results in Undefined variant;
 /// other versions are not supported and rejected;
 #[derive(Debug, PartialEq)]
+#[non_exhaustive]
 pub enum Version {
     Undefined,
     V1,
@@ -187,7 +188,7 @@ pub struct SetCombined {
 #[derive(Debug, PartialEq)]
 pub enum NextAction {
     MoreShares { have: usize, need: usize },
-    AskPwd,
+    AskUserForPassword,
 }
 
 impl SetInProgress {
@@ -309,7 +310,7 @@ impl ShareSet {
                 have: set_in_progress.id_set.len(),
                 need: self.required_shards,
             },
-            ShareSetState::SetCombined(_) => NextAction::AskPwd,
+            ShareSetState::SetCombined(_) => NextAction::AskUserForPassword,
         }
     }
     /// Function to print set title into user interface
@@ -374,22 +375,22 @@ impl ShareSet {
 #[rustfmt::skip]
 const PRIMITIVE_POLYNOMIALS: [u32; 18] = [
     3, // n = 3, or MIN_BITS
-    3, 
-    5, 
-    3, 
-    3, 
-    29, 
-    17, 
-    9, 
-    5, 
-    83, 
-    27, 
-    43, 
-    3, 
-    45, 
-    9, 
-    39, 
-    39, 
+    3,
+    5,
+    3,
+    3,
+    29,
+    17,
+    9,
+    5,
+    83,
+    27,
+    43,
+    3,
+    45,
+    9,
+    39,
+    39,
     9, // n = 20, or MAX_BITS
 ];
 
@@ -455,7 +456,9 @@ pub(crate) fn lagrange(
                 for j in 0..len {
                     if i != j {
                         let p1 = match logs.get(x[j] as usize) {
-                            Some(a) => a.expect("x[j] is never zero, it is share number, numbering starts from 1"),
+                            Some(a) => a.expect(
+                                "x[j] is never zero, it is share number, numbering starts from 1",
+                            ),
                             None => return Err(Error::LogOutOfRange(x[j])),
                         };
                         let p2 = match logs.get((x[i]^x[j]) as usize) {
