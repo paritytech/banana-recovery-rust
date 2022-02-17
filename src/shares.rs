@@ -160,7 +160,6 @@ pub struct ShareSet {
     version: Version,
     title: String,
     required_shards: usize,
-    nonce: String,
     state: ShareSetState,
 }
 
@@ -176,10 +175,14 @@ pub struct SetInProgress {
     id_set: Vec<u32>,
     content_length: usize,
     content_set: Vec<Vec<u8>>,
+    nonce: String,
 }
 
 #[derive(Debug)]
-pub struct SetCombined(Vec<u8>);
+pub struct SetCombined {
+    data: Vec<u8>,
+    nonce: Vec<u8>,
+}
 
 #[derive(Debug, PartialEq)]
 pub enum NextAction {
@@ -234,7 +237,18 @@ impl SetInProgress {
         // up until the first true, which serves as a padding marker,
         // cut padding marker as well, and then collect bytes with some padding on the left if necessary
         let result: BitVec<u8, Msb0> = result.into_iter().skip_while(|x| !*x).skip(1).collect();
-        Ok(SetCombined(result.into_vec()))
+        // transform result in its final form, Vec<u8>
+        let data = result.into_vec();
+        // process nonce, so that it is done before asking for a password
+        let nonce = match base64::decode(&self.nonce.as_bytes()) {
+            Ok(a) => a,
+            Err(_) => return Err(Error::NonceNotBase64),
+        };
+        // now the set is ready
+        Ok(SetCombined {
+            data,
+            nonce,
+        })
     }
 }
 
@@ -245,12 +259,12 @@ impl ShareSet {
             version: share.version,
             title: share.title,
             required_shards: share.required_shards,
-            nonce: share.nonce,
             state: ShareSetState::SetInProgress(SetInProgress {
                 bits: share.bits,
                 id_set: vec![share.id],
                 content_length: share.content.len(),
                 content_set: vec![share.content],
+                nonce: share.nonce,
             }),
         }
     }
@@ -267,7 +281,7 @@ impl ShareSet {
             if new.required_shards != self.required_shards {
                 return Err(Error::ShareRequiredShardsDifferent);
             } // ... and same number of required shards
-            if new.nonce != self.nonce {
+            if new.nonce != set_in_progress.nonce {
                 return Err(Error::ShareNonceDifferent);
             } // ... and same nonce
             if new.bits != set_in_progress.bits {
@@ -306,12 +320,7 @@ impl ShareSet {
     /// `passphrase` is the passphrase generated together with qr set by banana split.
     /// Should be accessible through user interface only for ShareSetState::SetCombined.
     pub fn recover_with_passphrase(&self, passphrase: &str) -> Result<String, Error> {
-        if let ShareSetState::SetCombined(SetCombined(ref encrypted_secret)) = &self.state {
-            // decode nonce
-            let nonce_vec = match base64::decode(&self.nonce.as_bytes()) {
-                Ok(a) => a,
-                Err(_) => return Err(Error::NonceNotBase64),
-            };
+        if let ShareSetState::SetCombined(SetCombined{data, nonce}) = &self.state {
 
             // hash title into salt
             let mut hasher = Sha512::new();
@@ -332,8 +341,8 @@ impl ShareSet {
             // set up cipher with key and decrypt secret using nonce
             let cipher = XSalsa20Poly1305::new(GenericArray::from_slice(&key[..]));
             match cipher.decrypt(
-                GenericArray::from_slice(&nonce_vec[..]),
-                encrypted_secret.as_ref(),
+                GenericArray::from_slice(&nonce[..]),
+                data.as_ref(),
             ) {
                 Ok(a) => match String::from_utf8(a) {
                     // in case of successful vector-to-string conversion, vector does not get copied:
