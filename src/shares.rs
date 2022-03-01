@@ -201,7 +201,9 @@ pub enum NextAction {
 
 impl SetInProgress {
     /// Function to process the set of shares.
-    /// To be called only on checked and ready set of shares, in other words does not check itself if the processing shares will produce a valid result.
+    /// To be called only on checked and ready set of shares,
+    /// in other words does not check itself if the processing
+    /// shares will produce a valid result.
     fn combine(&self) -> Result<SetCombined, Error> {
         // transpose content set
         // from
