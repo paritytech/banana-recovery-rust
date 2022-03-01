@@ -357,9 +357,8 @@ impl ShareSet {
             let mut key: Vec<u8> = [0; 32].to_vec(); // allocate here, empty output buffer is rejected
 
             // ... and scrypt them
-            if let Err(e) = scrypt(passphrase.as_bytes(), &salt, &params, &mut key) {
-                return Err(Error::ScryptFailed(e));
-            }
+            scrypt(passphrase.as_bytes(), &salt, &params, &mut key)
+                .map_err(Error::ScryptFailed)?;
 
             // set up cipher with key and decrypt secret using nonce
             let cipher = XSalsa20Poly1305::new(GenericArray::from_slice(&key[..]));
