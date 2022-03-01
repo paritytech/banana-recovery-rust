@@ -1,8 +1,10 @@
-use crate::shares::{MAX_BITS, MIN_BITS};
+use crate::shares::BIT_RANGE;
 
+#[allow(missing_docs)]
 #[derive(Debug, thiserror::Error)]
+#[non_exhaustive]
 pub enum Error {
-    #[error("Bits in share data {0} are outside of expected range [{min}..={max}]. Likely the share is damaged.", min=MIN_BITS, max=MAX_BITS)]
+    #[error("Bits in share data {0} are outside of expected range [{range:?}]. Likely the share is damaged.", range=BIT_RANGE)]
     BitsOutOfRange(u32),
     #[error("Decoded secret could not be displayed as a string.")]
     DecodedSecretNotString,
@@ -48,7 +50,7 @@ pub enum Error {
     ShareVersionDifferent,
     #[error("Share with undefined version was expected to have hexadecimal content.")]
     UndefinedBodyNotHex,
-    #[error("Version {.0} is not supported.")]
+    #[error("Version {0} is not supported.")]
     VersionNotSupported(String),
     #[error("Share with version V1 was expected to have content in base64 format.")]
     V1BodyNotBase64,

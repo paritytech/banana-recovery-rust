@@ -2,14 +2,15 @@ use bitvec::prelude::*;
 use scrypt::{scrypt, Params};
 use sha2::{Digest, Sha512};
 use std::convert::TryInto;
+use std::ops::RangeInclusive;
 use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, NewAead};
 use xsalsa20poly1305::XSalsa20Poly1305;
 use zeroize::Zeroize;
 
 use crate::error::Error;
 
-pub(crate) const MIN_BITS: u32 = 3;
-pub(crate) const MAX_BITS: u32 = 20;
+/// To be valid character, the bits must be within certain bounds.
+pub(crate) const BIT_RANGE: RangeInclusive<u32> = 3..=20;
 
 /// Struct to store information about individual share.
 /// `Share` information is decoded from the incoming share only.
@@ -83,12 +84,11 @@ impl Share {
         let bits = match share_chars.get(0) {
             Some(a) => match a.to_digit(36) {
                 Some(b) => {
-                    if !(MIN_BITS..=MAX_BITS).contains(&b) {
-                        return Err(Error::BitsOutOfRange(b));
-                    }
                     // checking if bits value is within allowed limits
-                    else {
+                    if BIT_RANGE.contains(&b) {
                         b
+                    } else {
+                            return Err(Error::BitsOutOfRange(b));
                     }
                 }
                 None => return Err(Error::ParseBit(*a)),
@@ -185,9 +185,17 @@ pub struct SetCombined {
     nonce: Vec<u8>,
 }
 
+/// The next action to do for the share set at hand.
 #[derive(Debug, PartialEq)]
 pub enum NextAction {
-    MoreShares { have: usize, need: usize },
+    /// More shares are required for reconstruction.
+    MoreShares {
+        /// The current number of shares available.
+        have: usize,
+        /// Number of shares needed for recovery.
+        need: usize,
+    },
+    /// The user password is needed.
     AskUserForPassword,
 }
 
@@ -368,13 +376,13 @@ impl ShareSet {
 }
 
 /// Primitive polynomials in Galois field GF(2^n), for 3 <= n <= 20.
-/// Value n is bits value for shares, and is limited by MIN_BITS and MAX_BITS constants.
+/// Value n is bits value for shares, and is limited by BIT_RANGE constants.
 /// Primitive polynomial values are taken from https://github.com/grempe/secrets.js/blob/master/secrets.js#L55
 /// See https://mathworld.wolfram.com/PrimitivePolynomial.html for definitions
 ///
 #[rustfmt::skip]
 const PRIMITIVE_POLYNOMIALS: [u32; 18] = [
-    3, // n = 3, or MIN_BITS
+    3, // n = 3, or BIT_RANGE.start
     3,
     5,
     3,

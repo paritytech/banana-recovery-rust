@@ -2,7 +2,7 @@
 mod tests {
     use hex;
 
-    use crate::shares::{generate_logs_and_exps, MAX_BITS, MIN_BITS};
+    use crate::shares::{generate_logs_and_exps, BIT_RANGE};
     use crate::{NextAction, Share, ShareSet};
 
     const SECRET_SEEDPHRASE: &str =
@@ -121,7 +121,7 @@ mod tests {
     #[test]
     fn math_works_as_expected() {
         // checking that logs generation is done properly
-        for n in MIN_BITS..=MAX_BITS {
+        for n in BIT_RANGE {
             let (logs, _) = generate_logs_and_exps(n);
             for (i, x) in logs.iter().enumerate() {
                 if i == 0 {
