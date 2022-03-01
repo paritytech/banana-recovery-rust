@@ -105,7 +105,7 @@ impl Share {
             Version::V1 => {
                 match base64::decode(String::from_iter(&share_chars[1..]).into_bytes()) {
                     Ok(a) => a,
-                    Err(_) => return Err(Error::V1BodyNotBase64),
+                    Err(_) => return Err(Error::BodyNotBase64),
                 }
             }
         };
