@@ -233,14 +233,17 @@ impl SetInProgress {
                 &exps,
                 self.bits,
             )?;
+
             // transform new element into new bitvec to operate on bits individually
             let new_bitvec: BitVec<u32, Msb0> = BitVec::from_vec(vec![new]);
+
             // in js code this crate follows, the bits string representation of new element (i.e. without leading zeroes)
             // was padded from left with zeroes so that the string length became multiple of (self.bits) number;
             // since the new element value is always below 2^(self.bits), this procedure effectively means keeping only
             // (self.bits) amount of bits from the element;
             // cut is the starting point after which the bits are retained;
             let cut = (32 - self.bits) as usize;
+
             // resulting bits are added into collection;
             result.extend_from_bitslice(&new_bitvec[cut..]);
         }
@@ -248,8 +251,10 @@ impl SetInProgress {
         // up until the first true, which serves as a padding marker,
         // cut padding marker as well, and then collect bytes with some padding on the left if necessary
         let result: BitVec<u8, Msb0> = result.into_iter().skip_while(|x| !*x).skip(1).collect();
+
         // transform result in its final form, Vec<u8>
         let data = result.into_vec();
+
         // process nonce, so that it is done before asking for a password
         let nonce = match base64::decode(&self.nonce.as_bytes()) {
             Ok(a) => a,
@@ -286,24 +291,31 @@ impl ShareSet {
             if new.version != self.version {
                 return Err(Error::ShareVersionDifferent);
             } // should have same version
+
             if new.title != self.title {
                 return Err(Error::ShareTitleDifferent);
             } // ... and same title
+
             if new.required_shards != self.required_shards {
                 return Err(Error::ShareRequiredShardsDifferent);
             } // ... and same number of required shards
+
             if new.nonce != set_in_progress.nonce {
                 return Err(Error::ShareNonceDifferent);
             } // ... and same nonce
+
             if new.bits != set_in_progress.bits {
                 return Err(Error::ShareBitsDifferent);
             } // ... and bits
+
             if set_in_progress.id_set.contains(&new.id) {
                 return Err(Error::ShareAlreadyInSet);
             } // ... also should be a new share
+
             if set_in_progress.content_length != new.content.len() {
                 return Err(Error::ShareContentLengthDifferent);
             } // ... with same content length
+
             set_in_progress.id_set.push(new.id);
             set_in_progress.content_set.push(new.content);
             if set_in_progress.id_set.len() >= self.required_shards {
