@@ -88,7 +88,7 @@ impl Share {
                     if BIT_RANGE.contains(&b) {
                         b
                     } else {
-                            return Err(Error::BitsOutOfRange(b));
+                        return Err(Error::BitsOutOfRange(b));
                     }
                 }
                 None => return Err(Error::ParseBit(*a)),
@@ -261,10 +261,7 @@ impl SetInProgress {
             Err(_) => return Err(Error::NonceNotBase64),
         };
         // now the set is ready
-        Ok(SetCombined {
-            data,
-            nonce,
-        })
+        Ok(SetCombined { data, nonce })
     }
 }
 
@@ -343,8 +340,7 @@ impl ShareSet {
     /// `passphrase` is the passphrase generated together with qr set by banana split.
     /// Should be accessible through user interface only for ShareSetState::SetCombined.
     pub fn recover_with_passphrase(&self, passphrase: &str) -> Result<String, Error> {
-        if let ShareSetState::SetCombined(SetCombined{data, nonce}) = &self.state {
-
+        if let ShareSetState::SetCombined(SetCombined { data, nonce }) = &self.state {
             // hash title into salt
             let mut hasher = Sha512::new();
             hasher.update(self.title.as_bytes());
@@ -357,15 +353,11 @@ impl ShareSet {
             let mut key: Vec<u8> = [0; 32].to_vec(); // allocate here, empty output buffer is rejected
 
             // ... and scrypt them
-            scrypt(passphrase.as_bytes(), &salt, &params, &mut key)
-                .map_err(Error::ScryptFailed)?;
+            scrypt(passphrase.as_bytes(), &salt, &params, &mut key).map_err(Error::ScryptFailed)?;
 
             // set up cipher with key and decrypt secret using nonce
             let cipher = XSalsa20Poly1305::new(GenericArray::from_slice(&key[..]));
-            match cipher.decrypt(
-                GenericArray::from_slice(&nonce[..]),
-                data.as_ref(),
-            ) {
+            match cipher.decrypt(GenericArray::from_slice(&nonce[..]), data.as_ref()) {
                 Ok(a) => match String::from_utf8(a) {
                     // in case of successful vector-to-string conversion, vector does not get copied:
                     // https://doc.rust-lang.org/std/string/struct.String.html#method.from_utf8
