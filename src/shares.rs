@@ -2,14 +2,15 @@ use bitvec::prelude::*;
 use scrypt::{scrypt, Params};
 use sha2::{Digest, Sha512};
 use std::convert::TryInto;
+use std::ops::RangeInclusive;
 use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, NewAead};
 use xsalsa20poly1305::XSalsa20Poly1305;
 use zeroize::Zeroize;
 
 use crate::error::Error;
 
-pub(crate) const MIN_BITS: u32 = 3;
-pub(crate) const MAX_BITS: u32 = 20;
+/// To be valid character, the bits must be within certain bounds.
+pub(crate) const BIT_RANGE: RangeInclusive<u32> = 3..=20;
 
 /// Struct to store information about individual share.
 /// `Share` information is decoded from the incoming share only.
@@ -83,12 +84,11 @@ impl Share {
         let bits = match share_chars.get(0) {
             Some(a) => match a.to_digit(36) {
                 Some(b) => {
-                    if !(MIN_BITS..=MAX_BITS).contains(&b) {
-                        return Err(Error::BitsOutOfRange(b));
-                    }
                     // checking if bits value is within allowed limits
-                    else {
+                    if BIT_RANGE.contains(&b) {
                         b
+                    } else {
+                        return Err(Error::BitsOutOfRange(b));
                     }
                 }
                 None => return Err(Error::ParseBit(*a)),
@@ -105,7 +105,7 @@ impl Share {
             Version::V1 => {
                 match base64::decode(String::from_iter(&share_chars[1..]).into_bytes()) {
                     Ok(a) => a,
-                    Err(_) => return Err(Error::V1BodyNotBase64),
+                    Err(_) => return Err(Error::BodyNotBase64),
                 }
             }
         };
@@ -185,15 +185,25 @@ pub struct SetCombined {
     nonce: Vec<u8>,
 }
 
+/// The next action to do for the share set at hand.
 #[derive(Debug, PartialEq)]
 pub enum NextAction {
-    MoreShares { have: usize, need: usize },
+    /// More shares are required for reconstruction.
+    MoreShares {
+        /// The current number of shares available.
+        have: usize,
+        /// Number of shares needed for recovery.
+        need: usize,
+    },
+    /// The user password is needed.
     AskUserForPassword,
 }
 
 impl SetInProgress {
     /// Function to process the set of shares.
-    /// To be called only on checked and ready set of shares, in other words does not check itself if the processing shares will produce a valid result.
+    /// To be called only on checked and ready set of shares,
+    /// in other words does not check itself if the processing
+    /// shares will produce a valid result.
     fn combine(&self) -> Result<SetCombined, Error> {
         // transpose content set
         // from
@@ -223,14 +233,17 @@ impl SetInProgress {
                 &exps,
                 self.bits,
             )?;
+
             // transform new element into new bitvec to operate on bits individually
             let new_bitvec: BitVec<u32, Msb0> = BitVec::from_vec(vec![new]);
+
             // in js code this crate follows, the bits string representation of new element (i.e. without leading zeroes)
             // was padded from left with zeroes so that the string length became multiple of (self.bits) number;
             // since the new element value is always below 2^(self.bits), this procedure effectively means keeping only
             // (self.bits) amount of bits from the element;
             // cut is the starting point after which the bits are retained;
             let cut = (32 - self.bits) as usize;
+
             // resulting bits are added into collection;
             result.extend_from_bitslice(&new_bitvec[cut..]);
         }
@@ -238,18 +251,17 @@ impl SetInProgress {
         // up until the first true, which serves as a padding marker,
         // cut padding marker as well, and then collect bytes with some padding on the left if necessary
         let result: BitVec<u8, Msb0> = result.into_iter().skip_while(|x| !*x).skip(1).collect();
+
         // transform result in its final form, Vec<u8>
         let data = result.into_vec();
+
         // process nonce, so that it is done before asking for a password
         let nonce = match base64::decode(&self.nonce.as_bytes()) {
             Ok(a) => a,
             Err(_) => return Err(Error::NonceNotBase64),
         };
         // now the set is ready
-        Ok(SetCombined {
-            data,
-            nonce,
-        })
+        Ok(SetCombined { data, nonce })
     }
 }
 
@@ -276,24 +288,31 @@ impl ShareSet {
             if new.version != self.version {
                 return Err(Error::ShareVersionDifferent);
             } // should have same version
+
             if new.title != self.title {
                 return Err(Error::ShareTitleDifferent);
             } // ... and same title
+
             if new.required_shards != self.required_shards {
                 return Err(Error::ShareRequiredShardsDifferent);
             } // ... and same number of required shards
+
             if new.nonce != set_in_progress.nonce {
                 return Err(Error::ShareNonceDifferent);
             } // ... and same nonce
+
             if new.bits != set_in_progress.bits {
                 return Err(Error::ShareBitsDifferent);
             } // ... and bits
+
             if set_in_progress.id_set.contains(&new.id) {
                 return Err(Error::ShareAlreadyInSet);
             } // ... also should be a new share
+
             if set_in_progress.content_length != new.content.len() {
                 return Err(Error::ShareContentLengthDifferent);
             } // ... with same content length
+
             set_in_progress.id_set.push(new.id);
             set_in_progress.content_set.push(new.content);
             if set_in_progress.id_set.len() >= self.required_shards {
@@ -321,8 +340,7 @@ impl ShareSet {
     /// `passphrase` is the passphrase generated together with qr set by banana split.
     /// Should be accessible through user interface only for ShareSetState::SetCombined.
     pub fn recover_with_passphrase(&self, passphrase: &str) -> Result<String, Error> {
-        if let ShareSetState::SetCombined(SetCombined{data, nonce}) = &self.state {
-
+        if let ShareSetState::SetCombined(SetCombined { data, nonce }) = &self.state {
             // hash title into salt
             let mut hasher = Sha512::new();
             hasher.update(self.title.as_bytes());
@@ -335,16 +353,11 @@ impl ShareSet {
             let mut key: Vec<u8> = [0; 32].to_vec(); // allocate here, empty output buffer is rejected
 
             // ... and scrypt them
-            if let Err(e) = scrypt(passphrase.as_bytes(), &salt, &params, &mut key) {
-                return Err(Error::ScryptFailed(e));
-            }
+            scrypt(passphrase.as_bytes(), &salt, &params, &mut key).map_err(Error::ScryptFailed)?;
 
             // set up cipher with key and decrypt secret using nonce
             let cipher = XSalsa20Poly1305::new(GenericArray::from_slice(&key[..]));
-            match cipher.decrypt(
-                GenericArray::from_slice(&nonce[..]),
-                data.as_ref(),
-            ) {
+            match cipher.decrypt(GenericArray::from_slice(&nonce[..]), data.as_ref()) {
                 Ok(a) => match String::from_utf8(a) {
                     // in case of successful vector-to-string conversion, vector does not get copied:
                     // https://doc.rust-lang.org/std/string/struct.String.html#method.from_utf8
@@ -368,13 +381,13 @@ impl ShareSet {
 }
 
 /// Primitive polynomials in Galois field GF(2^n), for 3 <= n <= 20.
-/// Value n is bits value for shares, and is limited by MIN_BITS and MAX_BITS constants.
+/// Value n is bits value for shares, and is limited by BIT_RANGE constants.
 /// Primitive polynomial values are taken from https://github.com/grempe/secrets.js/blob/master/secrets.js#L55
 /// See https://mathworld.wolfram.com/PrimitivePolynomial.html for definitions
 ///
 #[rustfmt::skip]
 const PRIMITIVE_POLYNOMIALS: [u32; 18] = [
-    3, // n = 3, or MIN_BITS
+    3, // n = 3, or BIT_RANGE.start
     3,
     5,
     3,

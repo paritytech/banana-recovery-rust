@@ -9,6 +9,8 @@
 
 mod error;
 mod shares;
+
+#[cfg(test)]
 mod tests;
 
 pub use error::Error;
