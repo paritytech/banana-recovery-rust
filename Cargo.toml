@@ -16,7 +16,7 @@ hex = "0.4.3"
 json = "0.12.4"
 scrypt = "0.8.1"
 sha2 = "0.10.1"
-xsalsa20poly1305 = {git = "https://github.com/Slesarew/AEADs"} # temporary fork with upped zeroize version
+xsalsa20poly1305 = "0.9"
 zeroize = {version = "1.5.2", features = ["alloc", "derive"]}
 thiserror = "1.0.30"
 
