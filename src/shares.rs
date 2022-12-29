@@ -3,7 +3,7 @@ use scrypt::{scrypt, Params};
 use sha2::{Digest, Sha512};
 use std::convert::TryInto;
 use std::ops::RangeInclusive;
-use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, NewAead};
+use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, KeyInit};
 use xsalsa20poly1305::XSalsa20Poly1305;
 use zeroize::Zeroize;
 
