@@ -67,7 +67,7 @@ impl Share {
             json::JsonValue::Null => Version::Undefined,
             a => return Err(Error::VersionNotSupported(a.to_string())),
         };
-        let title = (&share_string_parsed["t"]).to_string();
+        let title = share_string_parsed["t"].to_string();
         let required_shards = match &share_string_parsed["r"] {
             json::JsonValue::Number(a) => match a.to_string().parse::<usize>() {
                 Ok(b) => b,
@@ -75,13 +75,13 @@ impl Share {
             },
             a => return Err(Error::RequiredShardsNotSupported(a.to_string())),
         };
-        let nonce = (&share_string_parsed["n"]).to_string();
-        let data = (&share_string_parsed["d"]).to_string();
+        let nonce = share_string_parsed["n"].to_string();
+        let data = share_string_parsed["d"].to_string();
 
         // process the share data
         let share_chars: Vec<char> = data.chars().collect();
         // first share char is bits info in radix36 format
-        let bits = match share_chars.get(0) {
+        let bits = match share_chars.first() {
             Some(a) => match a.to_digit(36) {
                 Some(b) => {
                     // checking if bits value is within allowed limits
@@ -256,7 +256,7 @@ impl SetInProgress {
         let data = result.into_vec();
 
         // process nonce, so that it is done before asking for a password
-        let nonce = match base64::decode(&self.nonce.as_bytes()) {
+        let nonce = match base64::decode(self.nonce.as_bytes()) {
             Ok(a) => a,
             Err(_) => return Err(Error::NonceNotBase64),
         };
