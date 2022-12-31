@@ -50,7 +50,6 @@ impl Share {
             Err(_) => return Err(Error::NotShareString),
         };
 
-        dbg!(&share_string);
         // parsing the string with json
         let share_string_parsed = match json::parse(&share_string) {
             Ok(a) => a,
