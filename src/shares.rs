@@ -50,6 +50,7 @@ impl Share {
             Err(_) => return Err(Error::NotShareString),
         };
 
+        dbg!(&share_string);
         // parsing the string with json
         let share_string_parsed = match json::parse(&share_string) {
             Ok(a) => a,
@@ -148,6 +149,10 @@ impl Share {
     /// Function to print share title into user interface
     pub fn title(&self) -> String {
         self.title.to_owned()
+    }
+    /// Get the number of required shards
+    pub fn required_shards(&self) -> usize {
+        self.required_shards
     }
 }
 
