@@ -149,6 +149,10 @@ impl Share {
     pub fn title(&self) -> String {
         self.title.to_owned()
     }
+    /// Get the number of required shards
+    pub fn required_shards(&self) -> usize {
+        self.required_shards
+    }
 }
 
 /// Struct to store information about share set.
