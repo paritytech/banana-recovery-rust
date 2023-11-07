@@ -352,7 +352,8 @@ impl ShareSet {
             let salt = hasher.finalize();
 
             // set up the parameters for scrypt
-            let params = Params::recommended(); // default ones are used
+            let params =
+                Params::new(15, 8, 1, Params::RECOMMENDED_LEN).expect("static checked params"); // default ones are used
 
             // set up output buffer for scrypt
             let mut key: Vec<u8> = [0; 32].to_vec(); // allocate here, empty output buffer is rejected
