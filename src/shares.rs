@@ -1,3 +1,4 @@
+use base64::Engine;
 use bitvec::prelude::*;
 use scrypt::{scrypt, Params};
 use sha2::{Digest, Sha512};
@@ -6,6 +7,8 @@ use std::ops::RangeInclusive;
 use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, KeyInit};
 use xsalsa20poly1305::XSalsa20Poly1305;
 use zeroize::Zeroize;
+
+use base64::engine::general_purpose::STANDARD as BASE64;
 
 use crate::error::Error;
 
@@ -102,12 +105,10 @@ impl Share {
                 Ok(a) => a,
                 Err(_) => return Err(Error::UndefinedBodyNotHex),
             },
-            Version::V1 => {
-                match base64::decode(String::from_iter(&share_chars[1..]).into_bytes()) {
-                    Ok(a) => a,
-                    Err(_) => return Err(Error::BodyNotBase64),
-                }
-            }
+            Version::V1 => match BASE64.decode(String::from_iter(&share_chars[1..]).into_bytes()) {
+                Ok(a) => a,
+                Err(_) => return Err(Error::BodyNotBase64),
+            },
         };
 
         // maximum possible number of shares, u32
@@ -260,7 +261,7 @@ impl SetInProgress {
         let data = result.into_vec();
 
         // process nonce, so that it is done before asking for a password
-        let nonce = match base64::decode(self.nonce.as_bytes()) {
+        let nonce = match BASE64.decode(self.nonce.as_bytes()) {
             Ok(a) => a,
             Err(_) => return Err(Error::NonceNotBase64),
         };
@@ -351,7 +352,8 @@ impl ShareSet {
             let salt = hasher.finalize();
 
             // set up the parameters for scrypt
-            let params = Params::new(15, 8, 1).expect("static checked params"); // default ones are used
+            let params =
+                Params::new(15, 8, 1, Params::RECOMMENDED_LEN).expect("static checked params"); // default ones are used
 
             // set up output buffer for scrypt
             let mut key: Vec<u8> = [0; 32].to_vec(); // allocate here, empty output buffer is rejected
