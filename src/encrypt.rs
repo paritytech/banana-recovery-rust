@@ -62,12 +62,11 @@ pub fn encrypt(
                 d: share,
                 n: nonce.clone(),
             };
-            serde_json::to_string(&share).unwrap()
+            serde_json::to_string(&share).expect("share is serializable")
         })
         .collect())
 }
 
-///
 pub(crate) fn hash_string(s: &str) -> [u8; 64] {
     let mut hasher = Sha512::new();
     hasher.update(s.as_bytes());
