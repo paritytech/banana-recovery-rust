@@ -13,6 +13,9 @@ pub enum Error {
     #[error("Unable to decode the secret.")]
     DecodingFailed,
 
+    #[error("Encryption failed.")]
+    EncryptionFailed,
+
     #[error("Share contains no data.")]
     EmptyShare,
 
@@ -76,4 +79,12 @@ pub enum Error {
 
     #[error("Share with version V1 was expected to have content in base64 format.")]
     BodyNotBase64,
+
+    #[error("Too few shares.")]
+    TooFewShares,
+
+    #[error(
+        "Threshold number of shares must be an integer between 2 and 2^bits-1 ({0}), inclusive."
+    )]
+    TooManyShares(u32),
 }

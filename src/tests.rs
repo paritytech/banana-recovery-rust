@@ -1,3 +1,4 @@
+use crate::encrypt::encrypt;
 use crate::shares::{generate_logs_and_exps, BIT_RANGE};
 use crate::{NextAction, Share, ShareSet};
 
@@ -127,4 +128,124 @@ fn math_works_as_expected() {
             }
         }
     }
+}
+
+#[test]
+fn test_encrypt() {
+    let secret = "my secret";
+    let title = "my title";
+    let passphrase = "my passphrase";
+    let total_shards = 5;
+    let required_shards = 3;
+    let result = encrypt(secret, title, passphrase, total_shards, required_shards);
+    assert!(result.is_ok());
+    let shares = result.unwrap();
+    assert_eq!(shares.len(), total_shards);
+    for share in shares {
+        assert!(share.contains(title));
+    }
+}
+
+#[test]
+fn test_encrypt_with_invalid_shards() {
+    let secret = "my secret";
+    let title = "my title";
+    let passphrase = "my passphrase";
+    let total_shards = 2;
+    let required_shards = 3;
+    let result = encrypt(secret, title, passphrase, total_shards, required_shards);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_encrypt_decrypt() {
+    let shares = encrypt(SECRET_SEEDPHRASE, "title", PASSPHRASE_A, 3, 2).unwrap();
+    let share1 = Share::new(shares[0].clone().into_bytes()).unwrap();
+    let mut share_set = ShareSet::init(share1);
+    let share2 = Share::new(shares[1].clone().into_bytes()).unwrap();
+    share_set.try_add_share(share2).unwrap();
+    assert_eq!(
+        share_set.next_action(),
+        NextAction::AskUserForPassword,
+        "Two different shares are sufficient."
+    );
+
+    let alice_secret = share_set.recover_with_passphrase(PASSPHRASE_A).unwrap();
+    assert_eq!(alice_secret, SECRET_SEEDPHRASE, "Unexpected secret!");
+}
+
+#[test]
+fn test_encrypt_decrypt_4_3() {
+    let shares = encrypt(SECRET_SEEDPHRASE, "title", PASSPHRASE_A, 4, 3).unwrap();
+    let share1 = Share::new(shares[0].clone().into_bytes()).unwrap();
+    let mut share_set = ShareSet::init(share1);
+    let share2 = Share::new(shares[1].clone().into_bytes()).unwrap();
+    share_set.try_add_share(share2).unwrap();
+    let share3 = Share::new(shares[2].clone().into_bytes()).unwrap();
+    share_set.try_add_share(share3).unwrap();
+    assert_eq!(
+        share_set.next_action(),
+        NextAction::AskUserForPassword,
+        "Two different shares are sufficient."
+    );
+
+    let alice_secret = share_set.recover_with_passphrase(PASSPHRASE_A).unwrap();
+    assert_eq!(alice_secret, SECRET_SEEDPHRASE, "Unexpected secret!");
+}
+
+#[test]
+fn test_encrypt_decrypt_short() {
+    let secret = "🔑";
+    let passphrase = "🔒";
+    let title = "📝";
+    let shares = encrypt(secret, title, passphrase, 3, 2).unwrap();
+    assert!(shares[0].len() > 100, "Share is too short");
+    let share1 = Share::new(shares[0].clone().into_bytes()).unwrap();
+    let mut share_set = ShareSet::init(share1);
+    let share2 = Share::new(shares[1].clone().into_bytes()).unwrap();
+    share_set.try_add_share(share2).unwrap();
+    assert_eq!(
+        share_set.next_action(),
+        NextAction::AskUserForPassword,
+        "Two different shares are sufficient."
+    );
+
+    let recovered = share_set.recover_with_passphrase(passphrase).unwrap();
+    assert_eq!(recovered, secret, "Unexpected secret!");
+}
+
+#[test]
+fn test_encrypt_decrypt_many_shares() {
+    let shares = encrypt(SECRET_B, "title", PASSPHRASE_B, 200, 100).unwrap();
+    let share1 = Share::new(shares[0].clone().into_bytes()).unwrap();
+    let mut share_set = ShareSet::init(share1);
+
+    for share in shares.iter().rev().skip(1) {
+        let share = Share::new(share.clone().into_bytes()).unwrap();
+        share_set.try_add_share(share).unwrap();
+    }
+    assert_eq!(
+        share_set.next_action(),
+        NextAction::AskUserForPassword,
+        "Two different shares are sufficient."
+    );
+    let alice_secret = share_set.recover_with_passphrase(PASSPHRASE_B).unwrap();
+    assert_eq!(alice_secret, SECRET_B, "Unexpected secret!");
+}
+
+#[test]
+fn test_encrypt_decrypt_empty() {
+    let shares = encrypt("", "", "", 3, 2).unwrap();
+    let share1 = Share::new(shares[0].clone().into_bytes()).unwrap();
+    let mut share_set = ShareSet::init(share1);
+    let share2 = Share::new(shares[1].clone().into_bytes()).unwrap();
+    share_set.try_add_share(share2).unwrap();
+    assert_eq!(
+        share_set.next_action(),
+        NextAction::AskUserForPassword,
+        "Two different shares are sufficient."
+    );
+
+    let alice_secret = share_set.recover_with_passphrase("").unwrap();
+    assert_eq!(alice_secret, "", "Unexpected secret!");
 }

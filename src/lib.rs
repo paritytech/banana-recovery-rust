@@ -10,6 +10,12 @@
 mod error;
 mod shares;
 
+/// This module contains all the crypto related functions.
+mod encrypt;
+pub use encrypt::encrypt;
+
+mod passphrase;
+pub use passphrase::generate;
 #[cfg(test)]
 mod tests;
 
