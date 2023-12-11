@@ -1,13 +1,13 @@
 use base64::Engine;
 use bitvec::prelude::*;
+use crypto_secretbox::aead::{generic_array::GenericArray, Aead, KeyInit};
+use crypto_secretbox::XSalsa20Poly1305;
 use scrypt::{scrypt, Params};
-use sha2::{Digest, Sha512};
 use std::convert::TryInto;
 use std::ops::RangeInclusive;
-use xsalsa20poly1305::aead::{generic_array::GenericArray, Aead, KeyInit};
-use xsalsa20poly1305::XSalsa20Poly1305;
 use zeroize::Zeroize;
 
+use crate::encrypt::hash_string;
 use base64::engine::general_purpose::STANDARD as BASE64;
 
 use crate::error::Error;
@@ -347,13 +347,10 @@ impl ShareSet {
     pub fn recover_with_passphrase(&self, passphrase: &str) -> Result<String, Error> {
         if let ShareSetState::SetCombined(SetCombined { data, nonce }) = &self.state {
             // hash title into salt
-            let mut hasher = Sha512::new();
-            hasher.update(self.title.as_bytes());
-            let salt = hasher.finalize();
+            let salt = hash_string(&self.title);
 
             // set up the parameters for scrypt
-            let params =
-                Params::new(15, 8, 1, Params::RECOMMENDED_LEN).expect("static checked params"); // default ones are used
+            let params = Params::new(15, 8, 1, 32).expect("static checked params"); // default ones are used
 
             // set up output buffer for scrypt
             let mut key: Vec<u8> = [0; 32].to_vec(); // allocate here, empty output buffer is rejected

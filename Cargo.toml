@@ -2,7 +2,7 @@
 description = "Banana split decoding implementation in Rust"
 license = "Apache-2.0"
 name = "banana_recovery"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Alexander Slesarev <slesarew@gmail.com>", "Vera Abramova <abramova.vera@gmail.com>"]
 edition = "2021"
 repository = "https://github.com/paritytech/banana-recovery-rust"
@@ -16,9 +16,12 @@ hex = "0.4"
 json = "0.12"
 scrypt = "0.11"
 sha2 = "0.10"
-xsalsa20poly1305 = "0.9"
 zeroize = {version = "1.6", features = ["alloc", "derive"]}
 thiserror = "1.0"
+rand = "0.8"
+crypto_secretbox = "0.1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0"
 
 [lib]
 name = "banana_recovery"
